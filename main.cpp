@@ -2,7 +2,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
-
+//hello
 using namespace std;
 
 const int SCREEN_WIDTH_HARD = 24 * 30;
