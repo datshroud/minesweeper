@@ -256,7 +256,7 @@ public:
                                         grid[x][y].isNegativeFlagged = true;
                                     }
                                     else if (grid[x][y].isNegativeFlagged){
-                                        grid[x][y].isNegativeFlagged = false;
+                                        grid[x][y].isNegativeFlagged = false
                                     }
                                 }
                             }
@@ -315,7 +315,6 @@ int main(int argc, char *argv[]){
     }
 
     Minesweeper Game;
-    Game.InitGrid();
     Game.run(renderer);
 
     
