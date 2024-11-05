@@ -35,6 +35,8 @@ SDL_Texture* blueFlag;
 SDL_Texture* mine;
 SDL_Texture* youLose;
 SDL_Texture* youWin;
+SDL_Window* window;
+SDL_Renderer* renderer;
 
 class Tile{
 public:
@@ -60,6 +62,73 @@ public:
         InitGrid(level);
     }
 
+    void setup(){
+        if (SDL_Init(SDL_INIT_VIDEO)){
+            cout << "SDL_Init Error: " << SDL_GetError() << endl;
+            return;
+        }
+        if (TTF_Init() == -1){
+            cout << "TTF_Init Error: " << TTF_GetError() << endl;
+            return;
+        }
+        if (IMG_Init(IMG_INIT_PNG) == 0) {
+            cout << "IMG_Init Error: " << IMG_GetError() << endl;
+            return;
+        }
+
+        window = SDL_CreateWindow("Minesweeper", 
+                                            SDL_WINDOWPOS_CENTERED, 
+                                            SDL_WINDOWPOS_CENTERED, 
+                                            SCREEN_WIDTH_EASY, 
+                                            SCREEN_HEIGHT_EASY, 
+                                            SDL_WINDOW_SHOWN);
+        if (!window) {
+            cout << "SDL_CreateWindow Error: " << SDL_GetError() << endl;
+            return;
+        }
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+        if (!renderer){
+            cout << "SDL_CreateRenderer Error: " << SDL_GetError() << endl;
+            return;
+        }
+        gFont = TTF_OpenFont("res/font.ttf", 20);
+        if (!gFont){
+            cout << "TTF_OpenFont Error: " << TTF_GetError() << endl;
+            return; 
+        }
+        bFont = TTF_OpenFont("res/font.ttf", 24);
+        if (!bFont){
+            cout << "TTF_OpenFont Error: " << TTF_GetError() << endl;
+            return; 
+        }
+
+        greenFlag = IMG_LoadTexture(renderer, "res/img/green_flag.png");
+        if (!greenFlag) {
+            cout << "Can't load image: " << IMG_GetError() << endl;
+            return;
+        }
+        blueFlag = IMG_LoadTexture(renderer, "res/img/blue_flag.png");
+        if (!blueFlag){
+            cout << "Can't load image: " << IMG_GetError() << endl;
+            return;
+        }
+        mine = IMG_LoadTexture(renderer, "res/img/mine.png");
+        if (!mine){
+            cout << "Can't load image: " << IMG_GetError() << endl;
+            return;
+        }
+        youLose = IMG_LoadTexture(renderer, "res/img/you_lose.png");
+        if (!youLose){
+            cout << "Can't load image yL: " << IMG_GetError() << endl;
+            return;
+        }
+        youWin = IMG_LoadTexture(renderer, "res/img/you_win.png");
+        if (!youWin){
+            cout << "Can't load image yW: " << IMG_GetError() << endl;
+            return;
+        }
+    }
+
     //khoi tao ma tran bom tuy theo muc do de den kho
     void InitGrid(int level = 1){
         this->level = level;
@@ -78,6 +147,7 @@ public:
         }
 
         grid.resize(height, vector<Tile>(width));
+        resetGrid();
 
         // Dat min o vi tri ngau nhien
         //Min duong (+)
@@ -125,6 +195,23 @@ public:
             }
         }
     }
+    //ham reset grid
+    void resetGrid() {
+        for (auto& row : grid) {
+            for (auto& tile : row) {
+                tile.isPositiveMine = false;
+                tile.isNegativeMine = false;
+                tile.isRevealed = false;
+                tile.isPositiveFlagged = false;
+                tile.isNegativeFlagged = false;
+                tile.isMineNeared = false;
+                tile.neighboringMine = 0;
+            }
+        }
+        positiveMine.clear();
+        negativeMine.clear();
+        gameStatus = true; 
+    }
 
     //Ham mo cac o lan can khong co bom khi click chuot vao
     void revealTile(int x, int y){
@@ -145,17 +232,17 @@ public:
     }
 
     //tao mau ngau nhien tu 0 den 7
-    SDL_Color textColor0 = {(Uint8)(rand() % 151), (Uint8)(rand() % 151), (Uint8)(rand() % 151), 255};
-    SDL_Color textColor1 = {(Uint8)(rand() % 151), (Uint8)(rand() % 151), (Uint8)(rand() % 151), 255};
-    SDL_Color textColor2 = {(Uint8)(rand() % 151), (Uint8)(rand() % 151), (Uint8)(rand() % 151), 255};
-    SDL_Color textColor3 = {(Uint8)(rand() % 151), (Uint8)(rand() % 151), (Uint8)(rand() % 151), 255};
-    SDL_Color textColor4 = {(Uint8)(rand() % 151), (Uint8)(rand() % 151), (Uint8)(rand() % 151), 255};
-    SDL_Color textColor5 = {(Uint8)(rand() % 151), (Uint8)(rand() % 151), (Uint8)(rand() % 151), 255};
-    SDL_Color textColor6 = {(Uint8)(rand() % 151), (Uint8)(rand() % 151), (Uint8)(rand() % 151), 255};
-    SDL_Color textColor7 = {(Uint8)(rand() % 151), (Uint8)(rand() % 151), (Uint8)(rand() % 151), 255};
+    SDL_Color textColor0 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
+    SDL_Color textColor1 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
+    SDL_Color textColor2 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
+    SDL_Color textColor3 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
+    SDL_Color textColor4 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
+    SDL_Color textColor5 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
+    SDL_Color textColor6 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
+    SDL_Color textColor7 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
 
     // tao render cho game
-    void renderGrid(SDL_Renderer* renderer) {
+    void renderGrid(bool &running) {
         for (int i = 0; i < grid.size(); i++) {
             for (int j = 0; j < grid[0].size(); j++) {
                 int sz = 40;
@@ -213,31 +300,51 @@ public:
                 }
 
                 // ham cam co
-                flagged(renderer, i, j);
-                showBomb(renderer, i, j);
+                flagged(i, j);
+                showBomb(i, j);
             }
         }
+        if (!gameStatus) {
+            SDL_RenderPresent(renderer);
+            SDL_Delay(2000);
+            showMenu(running);
+        }
+            
     }
 
-    void showMenu(SDL_Renderer* renderer, bool replay = false) {
+    void showMenu(bool &running) {
+        SDL_RenderClear(renderer);
         int width, height;
-        
+        bool replay = false;
+
         if (level == 1) {
-            height = GRID_HEIGHT_EASY; width = GRID_WIDTH_EASY;
+            height = SCREEN_HEIGHT_EASY;
+             width = SCREEN_WIDTH_EASY;
         } else if (level == 2) {
-            height = GRID_HEIGHT_MEDIUM; width = GRID_WIDTH_MEDIUM;
+            height = SCREEN_HEIGHT_MEDIUM;
+             width = SCREEN_WIDTH_MEDIUM;
         } else {
-            height = GRID_HEIGHT_HARD; width = GRID_WIDTH_HARD;
+            height = SCREEN_HEIGHT_HARD;
+            width = SCREEN_WIDTH_HARD;
         }
 
-        SDL_Rect menuRect = {0, 0, width, height};  // Vị trí và kích thước của bảng
+        SDL_Rect menuRect = {0, 0, width, height};  
         SDL_RenderCopy(renderer, youLose, NULL, &menuRect);
         SDL_Color textColor = {255, 255, 255};
 
         SDL_Surface* messageSurface = TTF_RenderText_Solid(bFont, "Play Again", textColor);
         SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, messageSurface);
+        SDL_FreeSurface(messageSurface);
+
+        //lay kich thuoc texture
+        int textWidth, textHeight;
+        SDL_QueryTexture(textTexture, NULL, NULL, &textWidth, &textHeight);
         
-        
+        // tao 1 box cho play again
+        SDL_Rect textRect = {(width - textWidth) / 2, height - (40 + textHeight), textWidth, textHeight};
+        SDL_RenderCopy(renderer, textTexture, NULL, &textRect);
+
+        SDL_RenderPresent(renderer);
 
         SDL_Event e;
         bool waiting = true;
@@ -250,18 +357,42 @@ public:
                 if (e.type == SDL_MOUSEBUTTONDOWN) {
                     int x = e.button.x;
                     int y = e.button.y;
-                    if (x >= replayButton.x && x <= replayButton.x + replayButton.w &&
-                        y >= replayButton.y && y <= replayButton.y + replayButton.h) {
+                    if (x >= (width - textWidth) / 2 && x <= (width - textWidth) / 2 + textWidth &&
+                        y >= height - (40 + textHeight) && y <= height - (40 + textHeight) + 40) {
                         replay = true;
                         waiting = false;
                     }
                 }
             }
         }
+        if (replay) {
+            gameStatus = true;
+            InitGrid(level);
+            SDL_RenderClear(renderer);
+            renderGrid(running);
+            SDL_RenderPresent(renderer);
+            SDL_Delay(16);
+        }
+        else running = false;
+    }
+
+    void endGame(){
+        TTF_CloseFont(gFont);
+        TTF_CloseFont(bFont);
+        SDL_DestroyTexture(greenFlag);
+        SDL_DestroyTexture(blueFlag);
+        SDL_DestroyTexture(mine);
+        SDL_DestroyTexture(youLose);
+        SDL_DestroyTexture(youWin);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        TTF_Quit();
+        IMG_Quit();
+        SDL_Quit();
     }
 
 
-    void showBomb(SDL_Renderer* renderer, int x, int y){
+    void showBomb(int x, int y){
         if (grid[x][y].isNegativeFlagged || grid[x][y].isPositiveFlagged) return;
         SDL_Rect mineRect = {40 * y + 5, 40 * x + 60 + 5, 30, 30};
         if (grid[x][y].isNegativeMine || grid[x][y].isPositiveMine){
@@ -272,7 +403,7 @@ public:
     }
 
     //ham cam co
-    void flagged(SDL_Renderer* renderer, int i, int j){
+    void flagged(int i, int j){
         int sz = 40;
         SDL_Rect tileRect = { sz * j, sz * i + 60, sz, sz };
 
@@ -287,7 +418,7 @@ public:
     }
 
     //ham chay game
-    void run(SDL_Renderer* renderer){
+    void run(){
         bool running = true;
         SDL_Event event;
 
@@ -331,7 +462,7 @@ public:
                 }
             }
             SDL_RenderClear(renderer);
-            renderGrid(renderer);
+            renderGrid(running);
             SDL_RenderPresent(renderer);
             SDL_Delay(16);
         }
@@ -340,79 +471,10 @@ public:
 };
 
 int main(int argc, char *argv[]){
-    if (SDL_Init(SDL_INIT_VIDEO)){
-        cout << "SDL_Init Error: " << SDL_GetError() << endl;
-        return 1;
-    }
-    if (TTF_Init() == -1){
-        cout << "TTF_Init Error: " << TTF_GetError() << endl;
-        return 1;
-    }
-    if (IMG_Init(IMG_INIT_PNG) == 0) {
-        cout << "IMG_Init Error: " << IMG_GetError() << endl;
-        return 1;
-    }
-
-    SDL_Window* window = SDL_CreateWindow("Minesweeper", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH_EASY, SCREEN_HEIGHT_EASY, SDL_WINDOW_SHOWN);
-    if (!window) {
-        cout << "SDL_CreateWindow Error: " << SDL_GetError() << endl;
-        return 1;
-    }
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (!renderer){
-        cout << "SDL_CreateRenderer Error: " << SDL_GetError() << endl;
-        return 1;
-    }
-    gFont = TTF_OpenFont("res/font.ttf", 20);
-    if (!gFont){
-        cout << "TTF_OpenFont Error: " << TTF_GetError() << endl;
-        return 1; 
-    }
-    bFont = TTF_OpenFont("res/font.tff", 48);
-    if (!bFont){
-        cout << "TTF_OpenFont Error: " << TTF_GetError() << endl;
-        return 1; 
-    }
-
-    greenFlag = IMG_LoadTexture(renderer, "res/img/green_flag.png");
-    if (!greenFlag) {
-        cout << "Can't load image: " << IMG_GetError() << endl;
-        return 1;
-    }
-    blueFlag = IMG_LoadTexture(renderer, "res/img/blue_flag.png");
-    if (!blueFlag){
-        cout << "Can't load image: " << IMG_GetError() << endl;
-        return 1;
-    }
-    mine = IMG_LoadTexture(renderer, "res/img/mine.png");
-    if (!mine){
-        cout << "Can't load image: " << IMG_GetError() << endl;
-        return 1;
-    }
-    youLose = IMG_LoadTexture(renderer, "res/img/youlose.png");
-    if (!youLose){
-        cout << "Can't load image: " << IMG_GetError() << endl;
-        return 1;
-    }
-    youWin = IMG_LoadTexture(renderer, "res/img/you_win.png");
-    if (!youWin){
-        cout << "Can't load image: " << IMG_GetError() << endl;
-        return 1;
-    }
-
     Minesweeper Game;
+    Game.setup();
     Game.InitGrid();
-    Game.run(renderer);
-
-    
-
-    TTF_CloseFont(gFont);
-    SDL_DestroyTexture(greenFlag);
-    SDL_DestroyTexture(blueFlag);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    TTF_Quit();
-    IMG_Quit();
-    SDL_Quit();
+    Game.run();
+    Game.endGame();
     return 0;
 }
