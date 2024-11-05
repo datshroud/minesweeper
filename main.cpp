@@ -29,9 +29,12 @@ const int MINE_COUNT_MEDIUM = 40;
 const int MINE_COUNT_EASY = 10;
 
 TTF_Font* gFont = NULL;
+TTF_Font* bFont = NULL;
 SDL_Texture* greenFlag;
 SDL_Texture* blueFlag;
 SDL_Texture* mine;
+SDL_Texture* youLose;
+SDL_Texture* youWin;
 
 class Tile{
 public:
@@ -196,7 +199,7 @@ public:
                                 default: textColor = {0, 0, 0}; break;
                             }
 
-                            surfaceMessage = TTF_RenderText_Solid(gFont, std::to_string(neighborMineCount).c_str(), textColor);
+                            surfaceMessage = TTF_RenderText_Solid(gFont, to_string(neighborMineCount).c_str(), textColor);
                             SDL_Texture *message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
                             SDL_Rect textRect;
                             if (grid[i][j].neighboringMine >= 0) textRect = { sz * j + 10, sz * i + 60 + 10, sz - 20, sz - 20 };
@@ -217,15 +220,24 @@ public:
     }
 
     void showMenu(SDL_Renderer* renderer, bool replay = false) {
-        SDL_Rect menuRect = {200, 150, 240, 120};  // Vị trí và kích thước của bảng
-        SDL_SetRenderDrawColor(renderer, 169, 169, 169, 255); // Màu xám
-        SDL_RenderFillRect(renderer, &menuRect);
+        int width, height;
         
-        SDL_Rect replayButton = {240, 200, 160, 40}; // Vị trí và kích thước của nút
-        SDL_SetRenderDrawColor(renderer, 100, 149, 237, 255); // Màu xanh dương nhạt
-        SDL_RenderFillRect(renderer, &replayButton);
+        if (level == 1) {
+            height = GRID_HEIGHT_EASY; width = GRID_WIDTH_EASY;
+        } else if (level == 2) {
+            height = GRID_HEIGHT_MEDIUM; width = GRID_WIDTH_MEDIUM;
+        } else {
+            height = GRID_HEIGHT_HARD; width = GRID_WIDTH_HARD;
+        }
 
-        SDL_RenderPresent(renderer);
+        SDL_Rect menuRect = {0, 0, width, height};  // Vị trí và kích thước của bảng
+        SDL_RenderCopy(renderer, youLose, NULL, &menuRect);
+        SDL_Color textColor = {255, 255, 255};
+
+        SDL_Surface* messageSurface = TTF_RenderText_Solid(bFont, "Play Again", textColor);
+        SDL_Texture* textTexture = SDL_CreateTextureFromSurface(renderer, messageSurface);
+        
+        
 
         SDL_Event e;
         bool waiting = true;
@@ -255,8 +267,6 @@ public:
         if (grid[x][y].isNegativeMine || grid[x][y].isPositiveMine){
             if (grid[x][y].isRevealed) {
                 SDL_RenderCopy(renderer, mine, NULL, &mineRect);
-                SDL_Delay(1000);
-                showMenu(renderer);
             }
         }
     }
@@ -358,6 +368,11 @@ int main(int argc, char *argv[]){
         cout << "TTF_OpenFont Error: " << TTF_GetError() << endl;
         return 1; 
     }
+    bFont = TTF_OpenFont("res/font.tff", 48);
+    if (!bFont){
+        cout << "TTF_OpenFont Error: " << TTF_GetError() << endl;
+        return 1; 
+    }
 
     greenFlag = IMG_LoadTexture(renderer, "res/img/green_flag.png");
     if (!greenFlag) {
@@ -371,6 +386,16 @@ int main(int argc, char *argv[]){
     }
     mine = IMG_LoadTexture(renderer, "res/img/mine.png");
     if (!mine){
+        cout << "Can't load image: " << IMG_GetError() << endl;
+        return 1;
+    }
+    youLose = IMG_LoadTexture(renderer, "res/img/youlose.png");
+    if (!youLose){
+        cout << "Can't load image: " << IMG_GetError() << endl;
+        return 1;
+    }
+    youWin = IMG_LoadTexture(renderer, "res/img/you_win.png");
+    if (!youWin){
         cout << "Can't load image: " << IMG_GetError() << endl;
         return 1;
     }
