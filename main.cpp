@@ -31,6 +31,7 @@ const int MINE_COUNT_EASY = 10;
 TTF_Font* gFont = NULL;
 SDL_Texture* greenFlag;
 SDL_Texture* blueFlag;
+SDL_Texture* mine;
 
 class Tile{
 public:
@@ -48,6 +49,7 @@ private:
     int level = 1;
     vector<vector<Tile>> grid;
     vector<pair<int, int>> positiveMine, negativeMine;
+    bool gameStatus = true;
 
 public:
     Minesweeper(int level = 1){
@@ -59,6 +61,7 @@ public:
     void InitGrid(int level = 1){
         this->level = level;
         int height, width, mineCountPos, mineCountNeg;
+        gameStatus = true;
 
         if (level == 1) {
             height = GRID_HEIGHT_EASY; width = GRID_WIDTH_EASY;
@@ -182,7 +185,7 @@ public:
 
                             int neighborMineCount = grid[i][j].neighboringMine;
                             switch (neighborMineCount) {
-                                case 0: textColor = textColor0; break;
+                                case 0: case -8: textColor = textColor0; break;
                                 case 1: case -7: textColor = textColor1; break;
                                 case 2: case -6: textColor = textColor2; break;
                                 case 3: case -5: textColor = textColor3; break;
@@ -208,6 +211,52 @@ public:
 
                 // ham cam co
                 flagged(renderer, i, j);
+                showBomb(renderer, i, j);
+            }
+        }
+    }
+
+    void showMenu(SDL_Renderer* renderer, bool replay = false) {
+        SDL_Rect menuRect = {200, 150, 240, 120};  // Vị trí và kích thước của bảng
+        SDL_SetRenderDrawColor(renderer, 169, 169, 169, 255); // Màu xám
+        SDL_RenderFillRect(renderer, &menuRect);
+        
+        SDL_Rect replayButton = {240, 200, 160, 40}; // Vị trí và kích thước của nút
+        SDL_SetRenderDrawColor(renderer, 100, 149, 237, 255); // Màu xanh dương nhạt
+        SDL_RenderFillRect(renderer, &replayButton);
+
+        SDL_RenderPresent(renderer);
+
+        SDL_Event e;
+        bool waiting = true;
+        while (waiting) {
+            while (SDL_PollEvent(&e)) {
+                if (e.type == SDL_QUIT) {
+                    waiting = false;
+                    replay = false;
+                }
+                if (e.type == SDL_MOUSEBUTTONDOWN) {
+                    int x = e.button.x;
+                    int y = e.button.y;
+                    if (x >= replayButton.x && x <= replayButton.x + replayButton.w &&
+                        y >= replayButton.y && y <= replayButton.y + replayButton.h) {
+                        replay = true;
+                        waiting = false;
+                    }
+                }
+            }
+        }
+    }
+
+
+    void showBomb(SDL_Renderer* renderer, int x, int y){
+        if (grid[x][y].isNegativeFlagged || grid[x][y].isPositiveFlagged) return;
+        SDL_Rect mineRect = {40 * y + 5, 40 * x + 60 + 5, 30, 30};
+        if (grid[x][y].isNegativeMine || grid[x][y].isPositiveMine){
+            if (grid[x][y].isRevealed) {
+                SDL_RenderCopy(renderer, mine, NULL, &mineRect);
+                SDL_Delay(1000);
+                showMenu(renderer);
             }
         }
     }
@@ -245,8 +294,15 @@ public:
                             int x = (mY - 60) / 40;
                             int y = mX / 40;
                             if (!grid[x][y].isRevealed){
-                                if (event.button.button == SDL_BUTTON_LEFT)
-                                    revealTile(x, y);
+                                if (event.button.button == SDL_BUTTON_LEFT){
+                                    if (grid[x][y].isNegativeFlagged || grid[x][y].isPositiveFlagged){}
+                                    else if (grid[x][y].isPositiveMine || grid[x][y].isNegativeMine){
+                                        for (auto [i, j] : positiveMine) grid[i][j].isRevealed = true;
+                                        for (auto [i, j] : negativeMine) grid[i][j].isRevealed = true;
+                                        gameStatus = false;
+                                    }
+                                    else revealTile(x, y);
+                                }
                                 else if (event.button.button == SDL_BUTTON_RIGHT){
                                     if (!grid[x][y].isPositiveFlagged && !grid[x][y].isNegativeFlagged){
                                         grid[x][y].isPositiveFlagged = true;
@@ -310,6 +366,11 @@ int main(int argc, char *argv[]){
     }
     blueFlag = IMG_LoadTexture(renderer, "res/img/blue_flag.png");
     if (!blueFlag){
+        cout << "Can't load image: " << IMG_GetError() << endl;
+        return 1;
+    }
+    mine = IMG_LoadTexture(renderer, "res/img/mine.png");
+    if (!mine){
         cout << "Can't load image: " << IMG_GetError() << endl;
         return 1;
     }
