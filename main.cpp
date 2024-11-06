@@ -5,12 +5,12 @@
 
 using namespace std;
 
-const int SCREEN_WIDTH_HARD = 24 * 30;
-const int SCREEN_WIDTH_MEDIUM = 18 * 35;
+const int SCREEN_WIDTH_HARD = 24 * 40;
+const int SCREEN_WIDTH_MEDIUM = 18 * 40;
 const int SCREEN_WIDTH_EASY = 10 * 40;
 
-const int SCREEN_HEIGHT_HARD = 20 * 30 + 60;
-const int SCREEN_HEIGHT_MEDIUM = 14 * 35 + 60;
+const int SCREEN_HEIGHT_HARD = 20 * 40 + 60;
+const int SCREEN_HEIGHT_MEDIUM = 14 * 40 + 60;
 const int SCREEN_HEIGHT_EASY = 8 * 40 + 60;
 
 const int GRID_WIDTH_HARD = 24;
@@ -26,7 +26,7 @@ const int TILE_SIZE_EASY = 40;
 
 const int MINE_COUNT_HARD = 100;
 const int MINE_COUNT_MEDIUM = 40;
-const int MINE_COUNT_EASY = 10;
+const int MINE_COUNT_EASY = 12;
 
 TTF_Font* gFont = NULL;
 TTF_Font* bFont = NULL;
@@ -35,6 +35,7 @@ SDL_Texture* blueFlag;
 SDL_Texture* mine;
 SDL_Texture* youLose;
 SDL_Texture* youWin;
+SDL_Texture* dropdown;
 SDL_Window* window;
 SDL_Renderer* renderer;
 
@@ -55,7 +56,10 @@ private:
     vector<vector<Tile>> grid;
     vector<pair<int, int>> positiveMine, negativeMine;
     bool gameStatus = true;
-
+    int tileLeft = 68;
+    int blueFlagLeft = 9;
+    int greenFlagLeft = 3;
+    bool showMode = false;
 public:
     Minesweeper(int level = 1){
         this->level = level;
@@ -77,11 +81,11 @@ public:
         }
 
         window = SDL_CreateWindow("Minesweeper", 
-                                            SDL_WINDOWPOS_CENTERED, 
-                                            SDL_WINDOWPOS_CENTERED, 
-                                            SCREEN_WIDTH_EASY, 
-                                            SCREEN_HEIGHT_EASY, 
-                                            SDL_WINDOW_SHOWN);
+                                    SDL_WINDOWPOS_CENTERED, 
+                                    SDL_WINDOWPOS_CENTERED, 
+                                    SCREEN_WIDTH_EASY, 
+                                    SCREEN_HEIGHT_EASY, 
+                                    SDL_WINDOW_SHOWN);
         if (!window) {
             cout << "SDL_CreateWindow Error: " << SDL_GetError() << endl;
             return;
@@ -127,25 +131,47 @@ public:
             cout << "Can't load image yW: " << IMG_GetError() << endl;
             return;
         }
+        dropdown = IMG_LoadTexture(renderer, "res/img/dropdown.png");
+        if (!dropdown){
+            cout << "Can't load image dropdown: " << IMG_GetError() << endl;
+            return;
+        }
     }
 
     //khoi tao ma tran bom tuy theo muc do de den kho
     void InitGrid(int level = 1){
         this->level = level;
-        int height, width, mineCountPos, mineCountNeg;
+        int height, width, mineCountPos, mineCountNeg, sheight, swidth;
         gameStatus = true;
 
         if (level == 1) {
             height = GRID_HEIGHT_EASY; width = GRID_WIDTH_EASY;
-            mineCountPos = MINE_COUNT_EASY / 2; mineCountNeg = MINE_COUNT_EASY / 2;
+            mineCountPos = MINE_COUNT_EASY / 4; mineCountNeg = MINE_COUNT_EASY / 4;
+            sheight = SCREEN_HEIGHT_EASY; swidth = SCREEN_WIDTH_EASY;
+            tileLeft = 68;
         } else if (level == 2) {
             height = GRID_HEIGHT_MEDIUM; width = GRID_WIDTH_MEDIUM;
-            mineCountPos = MINE_COUNT_MEDIUM / 2; mineCountNeg = MINE_COUNT_MEDIUM / 2;
+            mineCountPos = MINE_COUNT_MEDIUM / 4; mineCountNeg = MINE_COUNT_MEDIUM / 4;
+            sheight = SCREEN_HEIGHT_MEDIUM; swidth = SCREEN_WIDTH_MEDIUM;
+            tileLeft = height * width - 40;
         } else {
             height = GRID_HEIGHT_HARD; width = GRID_WIDTH_HARD;
-            mineCountPos = MINE_COUNT_HARD / 2; mineCountNeg = MINE_COUNT_HARD / 2;
+            mineCountPos = MINE_COUNT_HARD / 4; mineCountNeg = MINE_COUNT_HARD / 4;
+            sheight = SCREEN_HEIGHT_HARD; swidth = SCREEN_WIDTH_HARD;
+            tileLeft = height * width - 100;
         }
 
+        mineCountNeg *= 3;
+
+        
+        SDL_SetWindowSize(window, swidth, sheight);
+
+        blueFlagLeft = mineCountNeg;
+        greenFlagLeft = mineCountPos;
+
+        showMode = false;
+
+        grid.clear();
         grid.resize(height, vector<Tile>(width));
         resetGrid();
 
@@ -217,7 +243,16 @@ public:
     void revealTile(int x, int y){
         if (x < 0 || y < 0 || x >= grid.size() || y >= grid[0].size() || grid[x][y].isRevealed) return;
 
+        tileLeft--;
         grid[x][y].isRevealed = true;
+        if (grid[x][y].isNegativeFlagged){
+            grid[x][y].isNegativeFlagged = false;
+            blueFlagLeft++;
+        }
+        if (grid[x][y].isPositiveFlagged){
+            grid[x][y].isPositiveFlagged = false;
+            greenFlagLeft++;
+        }
         // de quy mo cac o lan can khong co bom
         if (!grid[x][y].isMineNeared){
             for (int i = -1; i <= 1; i++){
@@ -225,24 +260,84 @@ public:
                     int dx = i + x;
                     int dy = j + y;
                     if (!(dx == x && dy == y) && min(dx, dy) >= 0 && dx < grid.size() && dy < grid[0].size()) 
-                        if (!grid[dx][dy].isRevealed) revealTile(dx, dy);
+                        if (!grid[dx][dy].isRevealed) revealTile(dx, dy);                            
                 }
             }
         }
     }
 
     //tao mau ngau nhien tu 0 den 7
-    SDL_Color textColor0 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
-    SDL_Color textColor1 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
-    SDL_Color textColor2 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
-    SDL_Color textColor3 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
-    SDL_Color textColor4 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
-    SDL_Color textColor5 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
-    SDL_Color textColor6 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
-    SDL_Color textColor7 = {(Uint8)(rand() % 75), (Uint8)(rand() % 75), (Uint8)(rand() % 75), 255};
+    SDL_Color textColor0 = {(Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), 255};
+    SDL_Color textColor1 = {(Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), 255};
+    SDL_Color textColor2 = {(Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), 255};
+    SDL_Color textColor3 = {(Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), 255};
+    SDL_Color textColor4 = {(Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), 255};
+    SDL_Color textColor5 = {(Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), 255};
+    SDL_Color textColor6 = {(Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), 255};
+    SDL_Color textColor7 = {(Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), (Uint8)(rand() % (64 + 128)), 255};
 
     // tao render cho game
     void renderGrid(bool &running) {
+        int width, height;
+
+        if (level == 1) {
+            height = SCREEN_HEIGHT_EASY;
+            width = SCREEN_WIDTH_EASY;
+        } else if (level == 2) {
+            height = SCREEN_HEIGHT_MEDIUM;
+            width = SCREEN_WIDTH_MEDIUM;
+        } else {
+            height = SCREEN_HEIGHT_HARD;
+            width = SCREEN_WIDTH_HARD;
+        }
+
+        //title
+        SDL_Rect titleRect = {0, 0, width, 60};
+        SDL_SetRenderDrawColor(renderer, 50, 50, 50, 255);
+        SDL_RenderFillRect(renderer, &titleRect);
+
+        //mode box
+        SDL_Rect modeRect = {20, 15, 120, 30};
+        if (level == 1) SDL_SetRenderDrawColor(renderer, 0, 191, 255, 255);
+        else if (level == 2) SDL_SetRenderDrawColor(renderer, 255, 223, 0, 255);
+        else SDL_SetRenderDrawColor(renderer, 255, 69, 0, 255);
+        SDL_RenderFillRect(renderer, &modeRect);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderDrawRect(renderer, &modeRect);
+
+        //hien dong chu len modebox
+        SDL_Color sModeColor = {0, 0, 0, 255};
+        SDL_Surface* sModeSurface1 = TTF_RenderText_Solid(gFont, "Easy", sModeColor);
+        SDL_Surface* sModeSurface2 = TTF_RenderText_Solid(gFont, "Medium", sModeColor);
+        SDL_Surface* sModeSurface3 = TTF_RenderText_Solid(gFont, "Hard", sModeColor);
+        SDL_Texture* sModeText = SDL_CreateTextureFromSurface(renderer, level == 1 ? sModeSurface1 : (level == 2 ? sModeSurface2 : sModeSurface3));
+        int sModew, sModeh;
+        SDL_QueryTexture(sModeText, NULL, NULL, &sModew, &sModeh);
+        SDL_Rect sModeRect = {30, 20, sModew, sModeh};
+        SDL_RenderCopy(renderer, sModeText, NULL, &sModeRect);
+
+        // xem so luong co
+        // hien so co xanh duong va xanh la
+        SDL_Color bColor = {0, 0, 255, 255};
+        SDL_Color gColor = {0, 255, 0, 255};
+        SDL_Surface* bSurface = TTF_RenderText_Solid(gFont, to_string(blueFlagLeft).c_str(), bColor);
+        SDL_Surface* gSurface = TTF_RenderText_Solid(gFont, to_string(greenFlagLeft).c_str(), gColor);
+        SDL_Texture* bText = SDL_CreateTextureFromSurface(renderer, bSurface);
+        SDL_Texture* gText = SDL_CreateTextureFromSurface(renderer, gSurface);
+        SDL_FreeSurface(bSurface);
+        SDL_FreeSurface(gSurface);
+        int bWidth, bHeight, gWidth, gHeight;
+        SDL_QueryTexture(bText, NULL, NULL, &bWidth, &bHeight);
+        SDL_QueryTexture(gText, NULL, NULL, &gWidth, &gHeight);
+        SDL_Rect bRect = {width - (bWidth + 20), 15, bWidth, 30};
+        SDL_Rect bFlagRect = {width - (bWidth + 20 + 10 + 30), 15, 30, 30};
+        SDL_Rect gRect = {width - (bWidth + 20 + 10 + 30 + 20 + gWidth), 15, gWidth, 30};
+        SDL_Rect gFlagRect = {width - (bWidth + 20 + 10 + 30 + 20 + gWidth + 10 + 30), 15, 30, 30};
+        SDL_RenderCopy(renderer, bText, NULL, &bRect);
+        SDL_RenderCopy(renderer, blueFlag, NULL, &bFlagRect);
+        SDL_RenderCopy(renderer, gText, NULL, &gRect);
+        SDL_RenderCopy(renderer, greenFlag, NULL, &gFlagRect);
+
         for (int i = 0; i < grid.size(); i++) {
             for (int j = 0; j < grid[0].size(); j++) {
                 int sz = 40;
@@ -301,15 +396,39 @@ public:
 
                 // ham cam co
                 flagged(i, j);
+                
+                
+
                 showBomb(i, j);
             }
         }
-        if (!gameStatus) {
+        //hien thi dropdown
+        if (showMode){
+            for (int i = 1; i <= 3; i++){
+                SDL_Rect modeRecti = {20, 15 + 30 * i, 120, 30};
+                if (i == 1) SDL_SetRenderDrawColor(renderer, 0, 191, 255, 255);
+                else if (i == 2) SDL_SetRenderDrawColor(renderer, 255, 223, 0, 255);
+                else SDL_SetRenderDrawColor(renderer, 255, 69, 0, 255);
+                SDL_RenderFillRect(renderer, &modeRecti);
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                SDL_RenderDrawRect(renderer, &modeRecti);
+
+                SDL_Texture* sModeTexti = SDL_CreateTextureFromSurface(renderer, i == 1 ? sModeSurface1 : (i == 2 ? sModeSurface2 : sModeSurface3));
+                int sModewi, sModehi;
+                SDL_QueryTexture(sModeTexti, NULL, NULL, &sModewi, &sModehi);
+                SDL_Rect sModeRecti = {30, 20 + 30 * i, sModewi, sModehi};
+                SDL_RenderCopy(renderer, sModeTexti, NULL, &sModeRecti);
+            }
+        }
+        SDL_FreeSurface(sModeSurface1);
+        SDL_FreeSurface(sModeSurface2);
+        SDL_FreeSurface(sModeSurface3);
+
+        if (!gameStatus || !tileLeft) {
             SDL_RenderPresent(renderer);
             SDL_Delay(2000);
             showMenu(running);
         }
-            
     }
 
     void showMenu(bool &running) {
@@ -329,7 +448,8 @@ public:
         }
 
         SDL_Rect menuRect = {0, 0, width, height};  
-        SDL_RenderCopy(renderer, youLose, NULL, &menuRect);
+        if (tileLeft) SDL_RenderCopy(renderer, youLose, NULL, &menuRect);
+        else SDL_RenderCopy(renderer, youWin, NULL, &menuRect);
         SDL_Color textColor = {255, 255, 255};
 
         SDL_Surface* messageSurface = TTF_RenderText_Solid(bFont, "Play Again", textColor);
@@ -384,6 +504,7 @@ public:
         SDL_DestroyTexture(mine);
         SDL_DestroyTexture(youLose);
         SDL_DestroyTexture(youWin);
+        SDL_DestroyTexture(dropdown);
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
         TTF_Quit();
@@ -430,34 +551,59 @@ public:
                         int mY, mX;
                         SDL_GetMouseState(&mX, &mY);
 
-                        if (mY <= 60){}
-                        else {
-                            int x = (mY - 60) / 40;
-                            int y = mX / 40;
-                            if (!grid[x][y].isRevealed){
-                                if (event.button.button == SDL_BUTTON_LEFT){
-                                    if (grid[x][y].isNegativeFlagged || grid[x][y].isPositiveFlagged){}
-                                    else if (grid[x][y].isPositiveMine || grid[x][y].isNegativeMine){
-                                        for (auto [i, j] : positiveMine) grid[i][j].isRevealed = true;
-                                        for (auto [i, j] : negativeMine) grid[i][j].isRevealed = true;
-                                        gameStatus = false;
+                        
+                        if (showMode) {
+                            if (mX >= 20 && mX <= 140 && mY >= 15 + 30 && mY < 45 + 30) {
+                                showMode = false;
+                                InitGrid(1);
+                            }
+                            else if (mX >= 20 && mX <= 140 && mY >= 15 + 60 && mY < 45 + 60) {
+                                showMode = false;
+                                InitGrid(2);
+                            }
+                            else if (mX >= 20 && mX <= 140 && mY >= 15 + 90 && mY <= 45 + 90) {
+                                showMode = false;
+                                InitGrid(3);
+                            }
+                            else showMode = false;
+                        } else if (!showMode){
+                            if (mX >= 20 && mX <= 140 && mY >= 15 && mY <= 45) showMode = true;
+                            else if (mY >= 60) {
+                                int x = (mY - 60) / 40;
+                                int y = mX / 40;
+                                if (!grid[x][y].isRevealed){
+                                    if (event.button.button == SDL_BUTTON_LEFT){
+                                        if (mX >= 20 && mX <= 140 && mY >= 15 && mY <= 45) showMode = true;
+                                        else {
+                                            if (grid[x][y].isNegativeFlagged || grid[x][y].isPositiveFlagged){}
+                                            else if (grid[x][y].isPositiveMine || grid[x][y].isNegativeMine){
+                                                for (auto [i, j] : positiveMine) grid[i][j].isRevealed = true;
+                                                for (auto [i, j] : negativeMine) grid[i][j].isRevealed = true;
+                                                gameStatus = false;
+                                            }
+                                            else revealTile(x, y);
+                                        }
                                     }
-                                    else revealTile(x, y);
-                                }
-                                else if (event.button.button == SDL_BUTTON_RIGHT){
-                                    if (!grid[x][y].isPositiveFlagged && !grid[x][y].isNegativeFlagged){
-                                        grid[x][y].isPositiveFlagged = true;
-                                    }
-                                    else if (grid[x][y].isPositiveFlagged){
-                                        grid[x][y].isPositiveFlagged = false;
-                                        grid[x][y].isNegativeFlagged = true;
-                                    }
-                                    else if (grid[x][y].isNegativeFlagged){
-                                        grid[x][y].isNegativeFlagged = false;
+                                    else if (event.button.button == SDL_BUTTON_RIGHT){
+                                        if (!grid[x][y].isPositiveFlagged && !grid[x][y].isNegativeFlagged){
+                                            grid[x][y].isPositiveFlagged = true;
+                                            greenFlagLeft--;
+                                        }
+                                        else if (grid[x][y].isPositiveFlagged){
+                                            grid[x][y].isPositiveFlagged = false;
+                                            grid[x][y].isNegativeFlagged = true;
+                                            greenFlagLeft++;
+                                            blueFlagLeft--;
+                                        }
+                                        else if (grid[x][y].isNegativeFlagged){
+                                            blueFlagLeft++;
+                                            grid[x][y].isNegativeFlagged = false;
+                                        }
                                     }
                                 }
                             }
                         }
+                        
                     }
                 }
             }
